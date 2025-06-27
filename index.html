@@ -1,0 +1,1305 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Surveillance Feux - Tableau de Bord</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Conteneur de notifications -->
+  <div class="notification-container" id="notificationContainer"></div>
+
+  <!-- Overlay pour le menu mobile -->
+  <div class="overlay" id="overlay"></div>
+
+  <!-- Menu mobile -->
+  <div class="mobile-menu" id="mobileMenu">
+    <div class="mobile-menu-header">
+      <h3>Menu</h3>
+      <button class="mobile-menu-close" id="closeMobileMenu">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    <div class="mobile-menu-items">
+      <a href="#" class="mobile-menu-item" id="mobileSimToggle">
+        <i class="fas fa-play-circle"></i>
+        <span>Simulation: ON</span>
+      </a>
+      <a href="/historique.html" class="mobile-menu-item">
+        <i class="fas fa-history"></i>
+        <span>Historique</span>
+      </a>
+      <a href="#" class="mobile-menu-item" id="mobileSaveLogBtn">
+        <i class="fas fa-download"></i>
+        <span>Télécharger Logs</span>
+      </a>
+      <a href="#" class="mobile-menu-item" id="mobileLogoutBtn">
+        <i class="fas fa-sign-out-alt"></i>
+        <span>Déconnexion</span>
+      </a>
+    </div>
+  </div>
+
+  <!-- Écran de connexion -->
+  <div id="loginScreen">
+    <div class="login-container">
+      <div class="login-logo">
+        <i class="fas fa-traffic-light"></i>
+        <h2>Système de Surveillance</h2>
+      </div>
+      <div class="field">
+        <label for="username">Utilisateur</label>
+        <input type="text" id="username" placeholder="Entrez votre nom d'utilisateur" />
+      </div>
+      <div class="field">
+        <label for="password">Mot de passe</label>
+        <input type="password" id="password" placeholder="Entrez votre mot de passe" />
+      </div>
+      <button class="btn-login" id="loginBtn">
+        <i class="fas fa-sign-in-alt"></i>
+        Se Connecter
+      </button>
+    </div>
+  </div>
+
+  <!-- Application principale -->
+  <div id="app" style="display: none;">
+    <!-- Header -->
+    <div class="header">
+      <div class="header-content">
+        <h1>
+          <i class="fas fa-traffic-light"></i>
+          Surveillance des Feux
+        </h1>
+        
+        <!-- Actions pour desktop -->
+        <div class="header-actions">
+          <button id="simToggle" class="header-btn">
+            <i class="fas fa-play-circle"></i>
+            Simulation: ON
+          </button>
+          <a href="/historique.html" class="header-btn">
+            <i class="fas fa-history"></i>
+            Historique
+          </a>
+          <button id="saveLogBtn" class="header-btn">
+            <i class="fas fa-download"></i>
+            Logs
+          </button>
+          <button id="logoutBtn" class="header-btn">
+            <i class="fas fa-sign-out-alt"></i>
+            Déconnexion
+          </button>
+        </div>
+        
+        <!-- Menu mobile -->
+        <div class="header-mobile-menu">
+          <button class="header-btn-mobile" id="openMobileMenu">
+            <i class="fas fa-bars"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div id="mainContent">
+      <div class="dashboard">
+        <!-- Carte -->
+        <div class="map-container">
+          <div id="map"></div>
+          <div class="map-overlay">
+            <div class="map-legend">
+              <h4>Légende</h4>
+              <div class="legend-item">
+                <div class="legend-color" style="background-color: #ef4444;"></div>
+                <span>Rouge</span>
+              </div>
+              <div class="legend-item">
+                <div class="legend-color" style="background-color: #f59e0b;"></div>
+                <span>Orange</span>
+              </div>
+              <div class="legend-item">
+                <div class="legend-color" style="background-color: #22c55e;"></div>
+                <span>Vert</span>
+              </div>
+              <div class="legend-item">
+                <div class="legend-color" style="background-color: #ef4444; animation: pulse 1.5s infinite"></div>
+                <span>Anomalie</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Panneau de détails -->
+        <div class="panel">
+          <div class="panel-header">
+            <h2 class="panel-title">
+              <i class="fas fa-info-circle"></i>
+              Détails du Feu
+            </h2>
+          </div>
+          
+          <div id="detailsPlaceholder">
+            <i class="fas fa-traffic-light"></i>
+            <p>Sélectionnez un feu sur la carte pour voir les détails</p>
+          </div>
+          
+          <div id="detailsView">
+            <div class="light-header">
+              <h3 id="lightName"></h3>
+            </div>
+            
+            <div class="light-status">
+              <div class="indicator" id="lightIndicator"></div>
+              <div id="lightState"></div>
+            </div>
+            
+            <div class="info-grid">
+              <div class="info-item">
+                <span class="info-label">N° de Série</span>
+                <span class="info-value" id="serie"></span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">Propriétaire</span>
+                <span class="info-value" id="owner"></span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">Pays</span>
+                <span class="info-value" id="pays"></span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">Tension Service</span>
+                <span class="info-value" id="tServ"></span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">Tension Alim</span>
+                <span class="info-value" id="tAlim"></span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">Luminosité</span>
+                <span class="info-value" id="lumi"></span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">Temps Fonction</span>
+                <span class="info-value" id="temps"></span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">Autonomie</span>
+                <span class="info-value" id="auto"></span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">Mode</span>
+                <span class="info-value" id="mode"></span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">Cycle en cours</span>
+                <span class="info-value" id="cycleNum"></span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">Table de cycle</span>
+                <span class="info-value" id="tableCycle"></span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">Optique Haut</span>
+                <span class="info-value" id="oHaut"></span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">Optique Centre</span>
+                <span class="info-value" id="oCentre"></span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">Optique Bas</span>
+                <span class="info-value" id="oBas"></span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">Position Géo</span>
+                <span class="info-value" id="posGeo"></span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">Position Physique</span>
+                <span class="info-value" id="posPhy"></span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">Radio</span>
+                <span class="info-value" id="radio"></span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">Bluetooth</span>
+                <span class="info-value" id="ble"></span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">Cycles</span>
+                <span class="info-value" id="lightCycles"></span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">Dernier Changement</span>
+                <span class="info-value" id="lightChange"></span>
+              </div>
+            </div>
+            
+            <!-- Panneau de contrôle pour changer l'état du feu -->
+            <div class="control-panel">
+              <h3><i class="fas fa-sliders-h"></i> Contrôle du feu</h3>
+              <div class="control-btn-group">
+                <button class="control-btn control-btn-red" data-state="0">
+                  <i class="fas fa-circle"></i> Rouge
+                </button>
+                <button class="control-btn control-btn-orange" data-state="1">
+                  <i class="fas fa-circle"></i> Orange
+                </button>
+                <button class="control-btn control-btn-green" data-state="2">
+                  <i class="fas fa-circle"></i> Vert
+                </button>
+              </div>
+              <div id="controlStatus" class="control-status"></div>
+            </div>
+
+
+            <!-- Panneau de contrôle des durées -->
+            <div class="duration-control">
+              <h3><i class="fas fa-clock"></i> Contrôle des durées</h3>
+              <div class="duration-grid">
+                <div class="duration-item">
+                  <label><i class="fas fa-circle" style="color: #ef4444;"></i> Rouge</label>
+                  <div class="duration-input-group">
+                    <input type="number" id="dureeRouge" min="5" max="300" class="duration-input">
+                    <span>s</span>
+                    <button class="btn-save-duration" data-etat="0" data-label="rouge">
+                      <i class="fas fa-save"></i>
+                    </button>
+                  </div>
+                </div>
+                <div class="duration-item">
+                  <label><i class="fas fa-circle" style="color: #f59e0b;"></i> Orange</label>
+                  <div class="duration-input-group">
+                    <input type="number" id="dureeOrange" min="5" max="300" class="duration-input">
+                    <span>s</span>
+                    <button class="btn-save-duration" data-etat="1" data-label="orange">
+                      <i class="fas fa-save"></i>
+                    </button>
+                  </div>
+                </div>
+                <div class="duration-item">
+                  <label><i class="fas fa-circle" style="color: #22c55e;"></i> Vert</label>
+                  <div class="duration-input-group">
+                    <input type="number" id="dureeVert" min="5" max="300" class="duration-input">
+                    <span>s</span>
+                    <button class="btn-save-duration" data-etat="2" data-label="vert">
+                      <i class="fas fa-save"></i>
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <div id="durationStatus" class="control-status"></div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Section des alertes -->
+        <div class="alertes-container">
+          <div class="alertes-header">
+            <h2><i class="fas fa-exclamation-triangle"></i> Alertes</h2>
+            <button id="clearAlertsBtn" class="clear-alerts-btn">
+              <i class="fas fa-trash-alt"></i> Effacer tout
+            </button>
+          </div>
+          <div id="alertesList" class="alertes-list">
+            <!-- Les alertes seront ajoutées ici dynamiquement -->
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    // Utilisateurs pour la connexion
+    const usersDB = [
+      {username:"admin", password:"admin", role:"super", company:"admin"},
+      {username:"CompanyA", password:"pass", role:"user", company:"CompanyA"},
+      {username:"CompanyB", password:"pass", role:"user", company:"CompanyB"},
+      {username:"CompanyC", password:"pass", role:"user", company:"CompanyC"}
+    ];
+
+    let currentUser = null;
+    let map = null;
+    let selectedSignalId = null;
+    const feuxData = {};   // Stockage des données des feux reçues du serveur
+    const markers = {};    // Stockage des marqueurs Leaflet
+    const logEntries = []; // Tableau pour stocker les entrées de log
+
+    // Socket.IO (initialisé après connexion)
+    let socket = null;
+
+    // Définitions des types de feux et leurs états
+    const typeStates = {
+      "Tricolore": {
+        0: { label:"Rouge",        color:"#ef4444" },
+        1: { label:"Orange",       color:"#f59e0b" },
+        2: { label:"Vert",         color:"#22c55e" }
+      },
+      "Piéton + Cligno": {
+        0: { label:"Éteint",       color:"#6b7280" },        
+        1: { label:"Jaune Cligno", color:"#fbbf24" },
+        2: { label:"Rouge Piéton", color:"#ef4444" },
+        3: { label:"Vert Piéton",  color:"#22c55e" }
+      },
+      "Transport en commun": {
+        0: { label:"Stop",         color:"#ef4444" },
+        1: { label:"Go",           color:"#22c55e" }
+      }
+    };
+
+    // Fonction pour initialiser Socket.IO après connexion réussie
+    function initializeSocketIO() {
+      // Initialiser la connexion Socket.IO
+      socket = io();
+      
+      // Écoute des événements Socket.IO pour les données initiales
+      socket.on('initial_data', (data) => {
+        console.log("Données initiales reçues:", data.length, "feux");
+        data.forEach(feu => {
+          // Normaliser l'ID pour toujours avoir feu.id
+          if (feu.ID && !feu.id) {
+            feu.id = feu.ID;
+          }
+          feuxData[feu.id] = feu;
+          if (map) {
+            addOrUpdateMarker(feu);
+          }
+        });
+      });
+
+      // Écoute des mises à jour des feux
+      socket.on('update_feu', (feu) => {
+        console.log("Mise à jour reçue pour le feu:", feu.id || feu.ID);
+        
+        // Normaliser l'ID
+        if (feu.ID && !feu.id) {
+          feu.id = feu.ID;
+        }
+        
+        feuxData[feu.id] = feu;
+        
+        if (map) {
+          addOrUpdateMarker(feu);
+        }
+        
+        // Si c'est le feu actuellement sélectionné, mettre à jour les détails
+        if (selectedSignalId === feu.id) {
+          showDetails(feu.id);
+        }
+      });
+
+      // Réception des événements d'anomalie
+      socket.on('feu_anomalie', (data) => {
+        console.log("Anomalie détectée:", data);
+        addLogEntry(`Anomalie détectée sur ${data.id}: ${data.message}`);
+        
+        // Afficher une notification d'alerte
+        showNotification(`Anomalie: ${data.message}`, "error", data.id);
+        
+        // Ajouter l'alerte à la liste des alertes
+        addAlertToList(data);
+        
+        // Mettre en évidence le marqueur sur la carte
+        highlightMarkerWithAnomaly(data.id);
+      });
+
+      // Réception des confirmations de commande
+      socket.on('command_confirmed', (data) => {
+        console.log(`Confirmation: État du feu ${data.id} changé à ${data.newState}`);
+        addLogEntry(`Confirmation: État du feu ${data.id} changé à ${data.newState}`);
+        
+        // Afficher notification de succès
+        showNotification("État du feu modifié avec succès", "success");
+        
+        // Mettre à jour le statut dans le panneau de contrôle
+        updateControlStatus("Commande exécutée avec succès", "success");
+      });
+
+      // Réception des erreurs de commande
+      socket.on('command_error', (data) => {
+        console.error(`Erreur: ${data.error}`);
+        addLogEntry(`Erreur: ${data.error}`);
+        
+        // Afficher notification d'erreur
+        showNotification(`Erreur: ${data.error}`, "error");
+        
+        // Mettre à jour le statut dans le panneau de contrôle
+        updateControlStatus(`Erreur: ${data.error}`, "error");
+      });
+
+      // Réception des confirmations au format original
+      socket.on('commande_confirmation', (data) => {
+        console.log("Confirmation de commande reçue:", data);
+        addLogEntry(`Commande confirmée: ${JSON.stringify(data)}`);
+        
+        // Afficher notification
+        showNotification("Commande exécutée avec succès", "success");
+        
+        // Mettre à jour le statut dans le panneau de contrôle
+        updateControlStatus("Commande exécutée avec succès", "success");
+      });
+
+      // Réception des erreurs au format original
+      socket.on('commande_erreur', (data) => {
+        console.error("Erreur de commande reçue:", data);
+        addLogEntry(`Erreur de commande: ${JSON.stringify(data)}`);
+        
+        // Afficher notification
+        showNotification(`Erreur: ${data.message || 'Échec de la commande'}`, "error");
+        
+        // Mettre à jour le statut dans le panneau de contrôle
+        updateControlStatus(`Erreur: ${data.message || 'Échec de la commande'}`, "error");
+      });
+    }
+
+    // Fonction pour ajouter une entrée au journal
+    function addLogEntry(message) {
+      const timestamp = new Date().toLocaleTimeString();
+      const logEntry = `[${timestamp}] ${message}`;
+      logEntries.push(logEntry);
+      console.log(logEntry);
+    }
+
+    // Fonction pour afficher des notifications
+    function showNotification(message, type, id = null) {
+      // Ne pas afficher les notifications si l'utilisateur n'est pas connecté
+      if (!currentUser) return;
+      
+      const notifContainer = document.getElementById('notificationContainer');
+      const notif = document.createElement('div');
+      notif.className = `notification ${type}`;
+      
+      let title = "";
+      let icon = "";
+      
+      switch(type) {
+        case "success":
+          title = "Succès";
+          icon = "fas fa-check-circle";
+          break;
+        case "error":
+          title = "Erreur";
+          icon = "fas fa-exclamation-circle";
+          break;
+        case "info":
+          title = "Information";
+          icon = "fas fa-info-circle";
+          break;
+        case "warning":
+          title = "Attention";
+          icon = "fas fa-exclamation-triangle";
+          break;
+      }
+      
+      let btnHtml = '';
+      if (id) {
+        btnHtml = `<button class="btn-voir-feu" onclick="centerMapOnFeu('${id}')">Voir sur la carte</button>`;
+      }
+      
+      notif.innerHTML = `
+        <div class="notification-icon">
+          <i class="${icon}"></i>
+        </div>
+        <div class="notification-content">
+          <div class="notification-title">${title}</div>
+          <div>${message}</div>
+          ${btnHtml}
+        </div>
+      `;
+      
+      notifContainer.appendChild(notif);
+      
+      // Disparaître après 5 secondes
+      setTimeout(() => {
+        notif.style.opacity = '0';
+        setTimeout(() => {
+          notifContainer.removeChild(notif);
+        }, 300);
+      }, 5000);
+    }
+
+    // Fonction pour ajouter une alerte à la liste
+    function addAlertToList(data) {
+      // Ne pas ajouter d'alertes si l'utilisateur n'est pas connecté
+      if (!currentUser) return;
+      
+      const alertesList = document.getElementById("alertesList");
+      
+      // Créer l'élément d'alerte
+      const alerteItem = document.createElement("div");
+      alerteItem.className = "alerte-item";
+      alerteItem.setAttribute("data-feu-id", data.id);
+      
+      // Formater la date
+      const date = new Date(data.timestamp);
+      const formattedDate = date.toLocaleString('fr-FR');
+      
+      // Déterminer l'icône en fonction du type d'anomalie
+      let alertIcon = "fas fa-exclamation-triangle";
+      let iconBg = "var(--danger-light)";
+      let iconColor = "var(--danger)";
+      
+      if (data.message.includes("optique")) {
+        alertIcon = "fas fa-lightbulb";
+      } else if (data.message.includes("Tension")) {
+        alertIcon = "fas fa-bolt";
+      } else if (data.message.includes("Autonomie")) {
+        alertIcon = "fas fa-battery-quarter";
+      }
+      
+      // Contenu de l'alerte
+      alerteItem.innerHTML = `
+        <div class="alerte-icon" style="background: ${iconBg}; color: ${iconColor}">
+          <i class="${alertIcon}"></i>
+        </div>
+        <div class="alerte-content">
+          <div class="alerte-header">
+            <span class="alerte-title">${data.id}</span>
+            <span class="alerte-time">${formattedDate}</span>
+          </div>
+          <div class="alerte-message">${data.message}</div>
+          <button class="btn-voir-feu" data-feu-id="${data.id}">
+            <i class="fas fa-map-marker-alt"></i> Voir sur la carte
+          </button>
+        </div>
+        <button class="btn-close-alerte" data-feu-id="${data.id}">×</button>
+      `;
+      
+      // Ajouter l'alerte au début de la liste
+      if (alertesList.firstChild) {
+        alertesList.insertBefore(alerteItem, alertesList.firstChild);
+      } else {
+        alertesList.appendChild(alerteItem);
+      }
+      
+      // Ajouter les gestionnaires d'événements
+      alerteItem.querySelector(".btn-voir-feu").addEventListener("click", () => {
+        centerMapOnFeu(data.id);
+        showDetails(data.id);
+      });
+      
+      alerteItem.querySelector(".btn-close-alerte").addEventListener("click", (e) => {
+        e.stopPropagation();
+        alertesList.removeChild(alerteItem);
+      });
+    }
+
+    // Fonction pour mettre en évidence un marqueur avec une anomalie
+    function highlightMarkerWithAnomaly(feuId) {
+      if (!currentUser || !markers[feuId]) return;
+      
+      // Créer une animation de pulsation pour le marqueur
+      const marker = markers[feuId];
+      const icon = marker.getIcon();
+      const originalHtml = icon.options.html;
+      
+      // Ajouter une classe d'animation au marqueur
+      marker.setIcon(L.divIcon({
+        className: "custom anomaly-marker",
+        html: originalHtml,
+        iconSize: [30, 30],
+        iconAnchor: [15, 15]
+      }));
+      
+      // Afficher un badge d'alerte sur le marqueur
+      marker.bindTooltip("⚠️ Anomalie détectée", {
+        permanent: true,
+        direction: 'top',
+        className: 'anomaly-tooltip'
+      }).openTooltip();
+    }
+
+    // Fonction pour mettre à jour le statut dans le panneau de contrôle
+    function updateControlStatus(message, type) {
+      const statusEl = document.getElementById("controlStatus");
+      if (statusEl) {
+        statusEl.textContent = message;
+        statusEl.className = `control-status ${type}`;
+        
+        // Masquer après quelques secondes
+        setTimeout(() => {
+          statusEl.className = "control-status";
+        }, 5000);
+      }
+    }
+
+    // Initialisation de la carte
+    function initMap() {
+      console.log("Initialisation de la carte");
+      map = L.map("map").setView([44.8378, -0.5792], 13);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors'
+      }).addTo(map);
+      
+      // Une fois la carte initialisée, ajouter les marqueurs pour les feux existants
+      if (Object.keys(feuxData).length > 0) {
+        console.log("Ajout des marqueurs existants à la carte");
+        Object.values(feuxData).forEach(feu => {
+          addOrUpdateMarker(feu);
+        });
+      }
+    }
+
+    // Fonction pour ajouter ou mettre à jour un marqueur sur la carte
+    function addOrUpdateMarker(feu) {
+      if (!map) {
+        console.warn("Tentative d'ajout de marqueur sans carte initialisée");
+        return;
+      }
+      
+      if (!feu || !feu.id) {
+        console.warn("Feu invalide:", feu);
+        return;
+      }
+      
+      try {
+        // Déterminer la couleur en fonction de l'état
+        const state = parseInt(feu.etat_courant) || 0;
+        const type = feu.type || "Tricolore";
+        const stateInfo = typeStates[type] ? typeStates[type][state] : { color: "#6b7280" };
+        const iconColor = stateInfo ? stateInfo.color : "#6b7280";
+        
+        // Créer l'icône
+        const icon = L.divIcon({
+          className: "custom",
+          html: `<div style="width:30px;height:30px;border-radius:50%;border:2px solid #fff;box-shadow:0 2px 4px rgba(0,0,0,0.3);background:${iconColor};"></div>`,
+          iconSize: [30, 30],
+          iconAnchor: [15, 15]
+        });
+        
+        // Récupérer les coordonnées
+        const lat = feu.latitude || (feu.Position_Géo ? parseFloat(feu.Position_Géo.split(',')[0]) : 44.8378);
+        const lng = feu.longitude || (feu.Position_Géo ? parseFloat(feu.Position_Géo.split(',')[1]) : -0.5792);
+        
+        if (markers[feu.id]) {
+          // Mettre à jour le marqueur existant
+          markers[feu.id].setIcon(icon);
+          markers[feu.id].setLatLng([lat, lng]);
+        } else {
+          // Créer un nouveau marqueur
+          markers[feu.id] = L.marker([lat, lng], { icon }).addTo(map);
+          markers[feu.id].on('click', () => showDetails(feu.id));
+          
+          // Ajouter un popup
+          updatePopup(feu);
+        }
+      } catch (error) {
+        console.error("Erreur lors de l'ajout/mise à jour du marqueur:", error);
+      }
+    }
+
+    // Mettre à jour le popup d'un marqueur
+    function updatePopup(feu) {
+      if (!markers[feu.id]) return;
+      
+      const type = feu.type || "Tricolore";
+      const state = parseInt(feu.etat_courant) || 0;
+      const stateInfo = typeStates[type] && typeStates[type][state];
+      const stateLabel = stateInfo ? stateInfo.label : `État ${state}`;
+      const stateColor = stateInfo ? stateInfo.color : "#6b7280";
+      
+      const html = `
+        <div class="popup-content">
+          <div class="popup-header">
+            <h3>${feu.nom || 'Feu ' + feu.id}</h3>
+          </div>
+          <div class="popup-body">
+            <div class="popup-info-item">
+              <span class="popup-label">Type</span>
+              <span class="popup-value">${type}</span>
+            </div>
+            <div class="popup-info-item">
+              <span class="popup-label">Propriétaire</span>
+              <span class="popup-value">${feu.owner || feu.IDE || 'N/A'}</span>
+            </div>
+            <div class="popup-info-item">
+              <span class="popup-label">État</span>
+              <span class="popup-value" style="color: ${stateColor}; font-weight: bold;">
+                ${stateLabel}
+              </span>
+            </div>
+          </div>
+          <div class="popup-footer">
+            <button class="popup-btn" onclick="showDetails('${feu.id}')">
+              <i class="fas fa-info-circle"></i> Voir détails
+            </button>
+          </div>
+        </div>
+      `;
+      
+      if (markers[feu.id].getPopup()) {
+        markers[feu.id].setPopupContent(html);
+      } else {
+        markers[feu.id].bindPopup(html);
+      }
+    }
+
+    // Fonction pour centrer la carte sur un feu
+    function centerMapOnFeu(feuId) {
+      if (!map || !markers[feuId]) return;
+      
+      const marker = markers[feuId];
+      const position = marker.getLatLng();
+      
+      map.setView(position, 15);
+      marker.openPopup();
+    }
+
+    // Filtrer les feux par utilisateur
+    function filterFeuxByUser() {
+      if (!currentUser) return [];
+      
+      // Pour le super utilisateur, renvoyer tous les feux
+      if (currentUser.role === "super") {
+        return Object.values(feuxData);
+      }
+      
+      // Pour les utilisateurs réguliers, filtrer par entreprise
+      // Pour les utilisateurs réguliers, filtrer par entreprise
+      return Object.values(feuxData).filter(feu => 
+        feu.owner === currentUser.company || feu.IDE === currentUser.company
+      );
+    }
+
+    // Afficher les détails d'un feu
+    function showDetails(id) {
+      console.log("Affichage des détails pour", id);
+      selectedSignalId = id;
+      const feu = feuxData[id];
+      
+      if (!feu) {
+        console.warn(`Feu ${id} non trouvé dans les données`);
+        return;
+      }
+      
+      // Afficher le panneau de détails
+      document.getElementById("detailsPlaceholder").style.display = "none";
+      document.getElementById("detailsView").style.display = "block";
+      
+      // Déterminer l'état et la couleur
+      const type = feu.type || "Tricolore";
+      const state = parseInt(feu.etat_courant) || 0;
+      const stateInfo = typeStates[type] && typeStates[type][state];
+      const stateLabel = stateInfo ? stateInfo.label : `État ${state}`;
+      const stateColor = stateInfo ? stateInfo.color : "#6b7280";
+      
+      // Mettre à jour l'en-tête et l'indicateur d'état
+      document.getElementById("lightName").textContent = feu.nom || `Feu ${feu.id}`;
+      document.getElementById("lightIndicator").style.backgroundColor = stateColor;
+      document.getElementById("lightState").textContent = `État: ${stateLabel}`;
+      
+      // Remplir les détails
+      document.getElementById("serie").textContent = feu.serie || "N/A";
+      document.getElementById("owner").textContent = feu.owner || feu.IDE || "N/A";
+      document.getElementById("pays").textContent = feu.pays || "N/A";
+      
+      // Détection d'anomalies pour coloration
+      const tensionService = feu.Tension_service || feu.tension_service || "N/A";
+      document.getElementById("tServ").textContent = tensionService;
+      if (tensionService.includes('5V')) {
+        document.getElementById("tServ").className = "info-value danger";
+      } else {
+        document.getElementById("tServ").className = "info-value";
+      }
+      
+      document.getElementById("tAlim").textContent = feu.Tension_alimentation || feu.tension_alim || "N/A";
+      document.getElementById("lumi").textContent = feu.Luminosité ? `${feu.Luminosité}%` : "N/A";
+      document.getElementById("temps").textContent = feu.Temps || feu.tempsFonction || "N/A";
+      
+      // Vérifier l'autonomie critique
+      const autonomie = feu.Autonomie || feu.autonomie || "N/A";
+      document.getElementById("auto").textContent = autonomie;
+      if (autonomie.includes('h')) {
+        const heures = parseInt(autonomie);
+        if (!isNaN(heures) && heures < 5) {
+          document.getElementById("auto").className = "info-value danger";
+        } else {
+          document.getElementById("auto").className = "info-value";
+        }
+      }
+      
+      document.getElementById("mode").textContent = feu.Mode || feu.mode || "N/A";
+      document.getElementById("cycleNum").textContent = feu.Num_cycle || feu.cycles_count || "N/A";
+      document.getElementById("tableCycle").textContent = feu.Table_cycle || feu.tableCycle || "N/A";
+      
+      // Vérifier les états des optiques
+      const optiqueHaut = feu.Etat_optique_haut || feu.optiqueHaut || "N/A";
+      document.getElementById("oHaut").textContent = optiqueHaut;
+      if (optiqueHaut === "NOK") {
+        document.getElementById("oHaut").className = "info-value danger";
+      } else {
+        document.getElementById("oHaut").className = "info-value";
+      }
+      
+      const optiqueCentre = feu.Etat_optique_central || feu.optiqueCentre || "N/A";
+      document.getElementById("oCentre").textContent = optiqueCentre;
+      if (optiqueCentre === "NOK") {
+        document.getElementById("oCentre").className = "info-value danger";
+      } else {
+        document.getElementById("oCentre").className = "info-value";
+      }
+      
+      const optiqueBas = feu.Etat_optique_bas || feu.optiqueBas || "N/A";
+      document.getElementById("oBas").textContent = optiqueBas;
+      if (optiqueBas === "NOK") {
+        document.getElementById("oBas").className = "info-value danger";
+      } else {
+        document.getElementById("oBas").className = "info-value";
+      }
+      
+      // Position géographique
+      if (feu.latitude !== undefined && feu.longitude !== undefined) {
+        document.getElementById("posGeo").textContent = `[${feu.latitude.toFixed(4)}, ${feu.longitude.toFixed(4)}]`;
+      } else if (feu.Position_Géo) {
+        document.getElementById("posGeo").textContent = feu.Position_Géo;
+      } else {
+        document.getElementById("posGeo").textContent = "N/A";
+      }
+      
+      document.getElementById("posPhy").textContent = feu.Position_Physique || feu.posPhysique || "N/A";
+      document.getElementById("radio").textContent = (feu.Radio === "oui" || feu.radio === true) ? "Oui" : "Non";
+      document.getElementById("ble").textContent = (feu.Bluetooth === "oui" || feu.bluetooth === true) ? "Oui" : "Non";
+      document.getElementById("lightCycles").textContent = feu.cycles_count || "0";
+      
+      // Dernier changement
+      if (feu.dernier_changement) {
+        const date = new Date(feu.dernier_changement);
+        document.getElementById("lightChange").textContent = date.toLocaleString('fr-FR', {
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit'
+        });
+      } else if (feu.lastChangeTime) {
+        const date = new Date(feu.lastChangeTime);
+        document.getElementById("lightChange").textContent = date.toLocaleString('fr-FR', {
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit'
+        });
+      } else {
+        document.getElementById("lightChange").textContent = "N/A";
+      }
+      
+      // Mettre à jour les boutons de contrôle en fonction du type de feu
+      updateControlButtons(feu);
+      
+      // Charger les durées du feu
+      loadDurees(id);
+      
+      // Fermer le popup sur la carte
+      if (map && markers[id]) {
+        markers[id].closePopup();
+      }
+    }
+
+
+
+
+    // Fonction pour charger les durées actuelles
+    function loadDurees(feuId) {
+      fetch(`/api/feux/${feuId}/durees`)
+        .then(response => response.json())
+        .then(data => {
+          document.getElementById('dureeRouge').value = data.duree_rouge;
+          document.getElementById('dureeOrange').value = data.duree_orange;
+          document.getElementById('dureeVert').value = data.duree_vert;
+        })
+        .catch(error => {
+          console.error('Erreur lors du chargement des durées:', error);
+        });
+    }
+
+    // Fonction pour mettre à jour une durée
+    function updateDuree(feuId, etat, duree) {
+      fetch(`/api/feux/${feuId}/duree`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          etat: parseInt(etat),
+          duree: parseInt(duree),
+          utilisateur: currentUser ? currentUser.username : 'anonymous'
+        })
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          showNotification("Durée modifiée avec succès", "success");
+          document.getElementById('durationStatus').textContent = data.message;
+          document.getElementById('durationStatus').className = 'control-status success';
+          setTimeout(() => {
+            document.getElementById('durationStatus').textContent = '';
+          }, 3000);
+        } else {
+          showNotification(data.error || "Erreur lors de la modification", "error");
+        }
+      })
+      .catch(error => {
+        console.error('Erreur:', error);
+        showNotification("Erreur de connexion", "error");
+      });
+    }
+
+
+    // Mettre à jour les boutons de contrôle
+    // Mettre à jour les boutons de contrôle et les durées
+    function updateControlButtons(feu) {
+      const controlPanel = document.querySelector('.control-btn-group');
+      const durationGrid = document.querySelector('.duration-grid');
+      
+      if (!controlPanel) return;
+      
+      const type = feu.type || "Tricolore";
+      
+      // Masquer tous les boutons d'abord
+      const allButtons = controlPanel.querySelectorAll('.control-btn');
+      allButtons.forEach(btn => btn.style.display = 'flex');
+      
+      // Masquer tous les contrôles de durée d'abord
+      if (durationGrid) {
+        const allDurationItems = durationGrid.querySelectorAll('.duration-item');
+        allDurationItems.forEach(item => item.style.display = 'block');
+      }
+      
+      // Afficher uniquement les boutons pertinents pour ce type de feu
+      if (type === "Tricolore") {
+        const buttons = controlPanel.querySelectorAll('.control-btn');
+        for (let i = 0; i < Math.min(buttons.length, 3); i++) {
+          buttons[i].style.display = 'flex';
+        }
+        // Afficher toutes les durées (Rouge, Orange, Vert)
+        // Rien à faire, tous les contrôles sont déjà visibles
+      } else if (type === "Piéton + Cligno") {
+        // Si on a 4 boutons, les afficher tous
+        const buttons = controlPanel.querySelectorAll('.control-btn');
+        for (let i = 0; i < Math.min(buttons.length, 4); i++) {
+          if (i < buttons.length) {
+            buttons[i].style.display = 'flex';
+            if (i === 3) { // Modifier le texte du 4e bouton
+              buttons[i].innerHTML = '<i class="fas fa-circle"></i> Vert Piéton';
+              buttons[i].setAttribute('data-state', '3');
+            }
+          }
+        }
+        // Pour les durées, on pourrait les adapter aussi
+        // Mais les feux piétons ont généralement aussi 3 durées principales
+      } else if (type === "Transport en commun") {
+        // N'afficher que les deux premiers boutons
+        const buttons = controlPanel.querySelectorAll('.control-btn');
+        if (buttons.length >= 2) {
+          buttons[0].style.display = 'flex';
+          buttons[0].innerHTML = '<i class="fas fa-circle"></i> Stop';
+          buttons[1].style.display = 'flex';
+          buttons[1].innerHTML = '<i class="fas fa-circle"></i> Go';
+          // Masquer les autres boutons
+          for (let i = 2; i < buttons.length; i++) {
+            buttons[i].style.display = 'none';
+          }
+        }
+        
+        // Masquer le contrôle de durée "Orange" pour Transport en commun
+        if (durationGrid) {
+          const durationItems = durationGrid.querySelectorAll('.duration-item');
+          if (durationItems.length >= 3) {
+            // Afficher seulement Rouge (Stop) et Vert (Go)
+            durationItems[0].style.display = 'block'; // Rouge (Stop)
+            durationItems[1].style.display = 'none';  // Orange (caché)
+            durationItems[2].style.display = 'block'; // Vert (Go)
+            
+            // Optionnellement, renommer les labels pour plus de clarté
+            durationItems[0].querySelector('label').innerHTML = '<i class="fas fa-circle" style="color: #ef4444;"></i> Stop';
+            durationItems[2].querySelector('label').innerHTML = '<i class="fas fa-circle" style="color: #22c55e;"></i> Go';
+          }
+        }
+      }
+      
+      // Mettre en évidence l'état actuel
+      const currentState = parseInt(feu.etat_courant) || 0;
+      const buttons = controlPanel.querySelectorAll('.control-btn');
+      buttons.forEach(btn => {
+        const buttonState = parseInt(btn.getAttribute('data-state'));
+        if (buttonState === currentState) {
+          btn.style.opacity = '1';
+          btn.style.fontWeight = '700';
+          btn.style.boxShadow = '0 0 0 2px #fff, 0 0 0 4px ' + btn.style.backgroundColor;
+        } else {
+          btn.style.opacity = '0.85';
+          btn.style.fontWeight = '600';
+          btn.style.boxShadow = 'none';
+        }
+      });
+    }
+
+    // Fonction pour envoyer une commande de changement d'état
+    function sendStateCommand(feuId, etat) {
+      if (!socket) {
+        console.error("Socket.IO n'est pas initialisé");
+        showNotification("Erreur de connexion", "error");
+        return;
+      }
+      
+      console.log(`Envoi de commande pour changer l'état de ${feuId} à ${etat}`);
+      addLogEntry(`Demande de changement d'état: ${feuId} -> ${etat}`);
+      
+      // Afficher un statut de chargement
+      updateControlStatus("Envoi de la commande...", "info");
+      
+      // Envoyer la commande via Socket.IO
+      socket.emit('change_state', {
+        id: feuId,
+        newState: parseInt(etat)
+      });
+      
+      // Notification
+      showNotification("Demande de changement d'état envoyée...", "info");
+      
+      // Si la commande n'est pas confirmée après 5 secondes, afficher un avertissement
+      setTimeout(() => {
+        const status = document.getElementById("controlStatus");
+        if (status && status.textContent === "Envoi de la commande...") {
+          updateControlStatus("Attente de confirmation...", "warning");
+        }
+      }, 5000);
+    }
+
+    // Fonction pour enregistrer les logs
+    function saveLogToFile() {
+      if (!logEntries.length) {
+        showNotification("Aucun log disponible", "warning");
+        return;
+      }
+      
+      const formattedLogs = logEntries.map(entry => entry.replace(/\n/g, ' '));
+      const blob = new Blob([formattedLogs.join("\n")], { type: "text/plain" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "logs_feux_" + new Date().toISOString().slice(0, 10) + ".txt";
+      a.click();
+      URL.revokeObjectURL(url);
+      
+      showNotification("Logs téléchargés avec succès", "success");
+    }
+
+    // Initialisation lors du chargement du document
+    // Initialisation lors du chargement du document
+    document.addEventListener('DOMContentLoaded', function() {
+      console.log("Document chargé, mise en place des gestionnaires d'événements...");
+      
+      // Initialisation des boutons de contrôle
+      const controlButtons = document.querySelectorAll('.control-btn');
+      console.log(`Trouvé ${controlButtons.length} boutons de contrôle`);
+      
+      // Ajouter les gestionnaires d'événements aux boutons
+      controlButtons.forEach(btn => {
+        btn.addEventListener('click', function() {
+          if (!selectedSignalId) {
+            console.error("Aucun feu sélectionné");
+            showNotification("Erreur: Aucun feu sélectionné", "error");
+            return;
+          }
+          
+          const etat = this.getAttribute('data-state');
+          console.log(`Bouton ${etat} cliqué pour le feu ${selectedSignalId}`);
+          sendStateCommand(selectedSignalId, etat);
+        });
+      });
+      
+      // Gestionnaire pour le bouton de connexion
+      document.getElementById("loginBtn").addEventListener("click", (event) => {
+        event.preventDefault();
+        
+        const u = document.getElementById("username").value.trim();
+        const p = document.getElementById("password").value.trim();
+        
+        console.log("Tentative de connexion avec:", u);
+        
+        const found = usersDB.find(x => x.username === u && x.password === p);
+        
+        if (found) {
+          console.log("Connexion réussie pour", u);
+          currentUser = found;
+          document.getElementById("loginScreen").style.display = "none";
+          document.getElementById("app").style.display = "block";
+          
+          // Initialiser Socket.IO après connexion
+          initializeSocketIO();
+          
+          // Initialiser la carte
+          setTimeout(() => {
+            initMap();
+          }, 100);
+          
+          addLogEntry(`Connexion réussie: ${u}`);
+          showNotification(`Bienvenue, ${u}!`, "success");
+        } else {
+          console.log("Échec d'authentification");
+          showNotification("Identifiants invalides", "error");
+        }
+      });
+      
+      // Gestionnaire pour le bouton de simulation
+      document.getElementById("simToggle").addEventListener("click", toggleSimulation);
+      document.getElementById("mobileSimToggle").addEventListener("click", toggleSimulation);
+      
+      function toggleSimulation() {
+        if (!socket) {
+          console.error("Socket.IO n'est pas initialisé");
+          showNotification("Erreur de connexion", "error");
+          return;
+        }
+        
+        const btn = document.getElementById("simToggle");
+        const mobileBtn = document.getElementById("mobileSimToggle");
+        const isActive = btn.textContent.includes("ON");
+        
+        // Envoyer une commande pour contrôler la simulation
+        socket.emit('envoyer_commande', {
+          feu_id: 'system',
+          commande: 'simulation',
+          etat: isActive ? 0 : 1,
+          utilisateur: currentUser ? currentUser.username : 'anonymous'
+        });
+        
+        const newText = isActive ? "Simulation: OFF" : "Simulation: ON";
+        btn.innerHTML = `<i class="fas fa-${isActive ? 'stop-circle' : 'play-circle'}"></i> ${newText}`;
+        mobileBtn.innerHTML = `<i class="fas fa-${isActive ? 'stop-circle' : 'play-circle'}"></i> <span>${newText}</span>`;
+        
+        addLogEntry(`Simulation ${isActive ? 'désactivée' : 'activée'}`);
+        showNotification(`Simulation ${isActive ? 'désactivée' : 'activée'}`, "info");
+        
+        // Fermer le menu mobile si ouvert
+        closeMobileMenu();
+      }
+      
+      // Gestionnaire pour le bouton de déconnexion
+      document.getElementById("logoutBtn").addEventListener("click", logout);
+      document.getElementById("mobileLogoutBtn").addEventListener("click", logout);
+      
+      function logout() {
+        currentUser = null;
+        
+        // Nettoyer la carte
+        if (map) {
+          Object.values(markers).forEach(marker => {
+            if (marker) marker.remove();
+          });
+        }
+        
+        // Réinitialiser les données
+        Object.keys(markers).forEach(key => delete markers[key]);
+        Object.keys(feuxData).forEach(key => delete feuxData[key]);
+        selectedSignalId = null;
+        
+        // Nettoyer la liste des alertes
+        document.getElementById("alertesList").innerHTML = "";
+        
+        // Fermer la connexion Socket.IO
+        if (socket) {
+          socket.disconnect();
+          socket = null;
+        }
+        
+        // Masquer l'application et afficher l'écran de connexion
+        document.getElementById("app").style.display = "none";
+        document.getElementById("loginScreen").style.display = "block";
+        
+        addLogEntry("Déconnexion");
+        showNotification("Vous avez été déconnecté", "info");
+        
+        // Fermer le menu mobile si ouvert
+        closeMobileMenu();
+      }
+      
+      // Gestionnaire pour le bouton de téléchargement des logs
+      document.getElementById("saveLogBtn").addEventListener("click", saveLogToFile);
+      document.getElementById("mobileSaveLogBtn").addEventListener("click", saveLogToFile);
+      
+      // Gestionnaire pour effacer toutes les alertes
+      document.getElementById("clearAlertsBtn").addEventListener("click", () => {
+        document.getElementById("alertesList").innerHTML = "";
+        showNotification("Toutes les alertes ont été effacées", "success");
+      });
+      
+      // Gestionnaires pour les boutons de sauvegarde des durées
+      document.querySelectorAll('.btn-save-duration').forEach(button => {
+        button.addEventListener('click', function() {
+          if (!selectedSignalId) {
+            showNotification("Veuillez sélectionner un feu", "error");
+            return;
+          }
+          
+          const etat = this.dataset.etat;
+          const label = this.dataset.label;
+          const inputId = 'duree' + label.charAt(0).toUpperCase() + label.slice(1);
+          const duree = document.getElementById(inputId).value;
+          
+          if (!duree || duree < 5 || duree > 300) {
+            showNotification("La durée doit être entre 5 et 300 secondes", "error");
+            return;
+          }
+          
+          updateDuree(selectedSignalId, etat, duree);
+        });
+      });
+      
+      // Menu mobile
+      document.getElementById("openMobileMenu").addEventListener("click", () => {
+        document.getElementById("mobileMenu").classList.add("active");
+        document.getElementById("overlay").classList.add("active");
+      });
+      
+      document.getElementById("closeMobileMenu").addEventListener("click", closeMobileMenu);
+      document.getElementById("overlay").addEventListener("click", closeMobileMenu);
+      
+      function closeMobileMenu() {
+        document.getElementById("mobileMenu").classList.remove("active");
+        document.getElementById("overlay").classList.remove("active");
+      }
+      
+      // Empêcher la soumission du formulaire de connexion avec Enter
+      document.getElementById("password").addEventListener("keypress", function(event) {
+        if (event.key === "Enter") {
+          event.preventDefault();
+          document.getElementById("loginBtn").click();
+        }
+      });
+      
+      document.getElementById("username").addEventListener("keypress", function(event) {
+        if (event.key === "Enter") {
+          event.preventDefault();
+          document.getElementById("password").focus();
+        }
+      });
+      
+      // Focus sur le champ username au chargement
+      document.getElementById("username").focus();
+      
+      // Afficher l'écran de connexion au chargement
+      document.getElementById("loginScreen").style.display = "block";
+      
+      console.log("Tous les gestionnaires d'événements sont configurés");
+    });
+    
+    // Fonction pour exposer les fonctions au contexte global (pour les appels depuis le HTML)
+    window.showDetails = showDetails;
+    window.centerMapOnFeu = centerMapOnFeu;
+  </script>
+</body>
+</html>
